@@ -1,56 +1,63 @@
 import streamlit as st
-from openai import OpenAI
+import openai
+import pandas as pd
 
 # Show title and description.
-st.title("💬 Chatbot")
+st.title("🔍 Excel Search Chatbot")
 st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
+    "This chatbot searches an Excel file stored in a GitHub repository and uses OpenAI's GPT-3.5 model to generate responses based on the queried data. "
+    "Make sure to configure your OpenAI API key in the Streamlit secrets section."
 )
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-else:
+# Retrieve the OpenAI API Key securely stored in Streamlit secrets.
+openai_api_key = st.secrets["openai_api_key"]
 
-    # Create an OpenAI client.
-    client = OpenAI(api_key=openai_api_key)
+# Initialize OpenAI with the API key.
+openai.api_key = openai_api_key
 
-    # Create a session state variable to store the chat messages. This ensures that the
-    # messages persist across reruns.
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+# Define the GitHub URL of the Excel file.
+excel_url = 'https://raw.githubusercontent.com/your-repo/your-repo/main/your-excel-file.xlsx'
 
-    # Display the existing chat messages via `st.chat_message`.
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+# Load Excel file.
+@st.cache
+def load_excel(url):
+    return pd.read_excel(url)
 
-    # Create a chat input field to allow the user to enter a message. This will display
-    # automatically at the bottom of the page.
-    if prompt := st.chat_input("What is up?"):
+data = load_excel(excel_url)
 
-        # Store and display the current prompt.
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+# Create a session state variable to store the chat messages.
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-        # Generate a response using the OpenAI API.
-        stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
+# Display the existing chat messages.
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-        # Stream the response to the chat using `st.write_stream`, then store it in 
-        # session state.
-        with st.chat_message("assistant"):
-            response = st.write_stream(stream)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+# Create a chat input field for the user to enter a message.
+prompt = st.chat_input("What is up?")
+if prompt:
+    # Store and display the current prompt.
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Search the Excel file based on the user's question.
+    search_result = data[data.apply(lambda row: row.astype(str).str.contains(prompt, case=False).any(), axis=1)]
+
+    # Convert the search result to a string.
+    search_result_str = search_result.to_string(index=False)
+
+    # Generate a response using the OpenAI API, including the search result.
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt=f"User asked: {prompt}\nExcel Data:\n{search_result_str}\nGenerate a response for the user.",
+        max_tokens=150
+    ).choices[0].text.strip()
+
+    # Display the assistant's response.
+    with st.chat_message("assistant"):
+        st.markdown(response)
+
+    # Store the response in session state.
+    st.session_state.messages.append({"role": "assistant", "content": response})
