@@ -1,6 +1,7 @@
 import streamlit as st
 import openai
 import pandas as pd
+import urllib.error
 
 # Show title and description.
 st.title("🔍 Excel Search Chatbot")
@@ -18,12 +19,23 @@ openai.api_key = openai_api_key
 # Define the GitHub URL of the Excel file.
 excel_url = 'https://raw.githubusercontent.com/your-repo/your-repo/main/your-excel-file.xlsx'
 
-# Load Excel file.
+# Load Excel file with error handling.
 @st.cache_data
 def load_excel(url):
-    return pd.read_excel(url)
+    try:
+        data = pd.read_excel(url)
+        return data
+    except urllib.error.HTTPError as e:
+        st.error(f"HTTPError: {e}")
+        return None
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+        return None
 
 data = load_excel(excel_url)
+
+if data is None:
+    st.stop()  # Stop the app if the data couldn't be loaded.
 
 # Create a session state variable to store the chat messages.
 if "messages" not in st.session_state:
@@ -45,7 +57,7 @@ if prompt:
     # Search the Excel file based on the user's question.
     search_result = data[data.apply(lambda row: row.astype(str).str.contains(prompt, case=False).any(), axis=1)]
 
-    # Convert the search result to a string.
+    # Convert search result to a string.
     if not search_result.empty:
         search_result_str = search_result.to_string(index=False)
     else:
