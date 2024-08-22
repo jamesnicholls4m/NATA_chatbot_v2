@@ -17,7 +17,7 @@ openai_api_key = st.secrets["general"]["openai_api_key"]
 openai.api_key = openai_api_key
 
 # Define the GitHub URL of the Excel file.
-excel_url = 'https://raw.githubusercontent.com/jamesnicholls4m/NATA_chatbot_v2/main/NATA%20A2Z%20List%20-%20August%202024%20-%20v1.xlsx'
+excel_url = 'https://raw.githubusercontent.com/jamesnicholls4m/NATA_chatbot_v2/main/NATA%20A2Z%20List%20-%20August%202024%20-%20v1.csv'
 
 # Load Excel file with error handling.
 @st.cache_data
