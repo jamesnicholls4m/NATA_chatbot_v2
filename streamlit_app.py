@@ -10,7 +10,7 @@ st.write(
 )
 
 # Retrieve the OpenAI API Key securely stored in Streamlit secrets.
-openai_api_key = st.secrets["openai_api_key"]
+openai_api_key = st.secrets["general"]["openai_api_key"]
 
 # Initialize OpenAI with the API key.
 openai.api_key = openai_api_key
@@ -19,7 +19,7 @@ openai.api_key = openai_api_key
 excel_url = 'https://raw.githubusercontent.com/your-repo/your-repo/main/your-excel-file.xlsx'
 
 # Load Excel file.
-@st.cache
+@st.cache_data
 def load_excel(url):
     return pd.read_excel(url)
 
@@ -35,7 +35,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # Create a chat input field for the user to enter a message.
-prompt = st.chat_input("What is up?")
+prompt = st.chat_input("Type your question here...")
 if prompt:
     # Store and display the current prompt.
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -46,9 +46,12 @@ if prompt:
     search_result = data[data.apply(lambda row: row.astype(str).str.contains(prompt, case=False).any(), axis=1)]
 
     # Convert the search result to a string.
-    search_result_str = search_result.to_string(index=False)
+    if not search_result.empty:
+        search_result_str = search_result.to_string(index=False)
+    else:
+        search_result_str = "No relevant data found in the Excel file."
 
-    # Generate a response using the OpenAI API, including the search result.
+    # Generate a response using the OpenAI API, including the search result in the prompt.
     response = openai.Completion.create(
         model="text-davinci-003",
         prompt=f"User asked: {prompt}\nExcel Data:\n{search_result_str}\nGenerate a response for the user.",
