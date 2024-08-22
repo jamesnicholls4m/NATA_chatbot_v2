@@ -6,7 +6,7 @@ import urllib.error
 # Show title and description.
 st.title("🔍 Excel Search Chatbot")
 st.write(
-    "This chatbot searches an Excel file stored in a GitHub repository and uses OpenAI's GPT-3.5 model to generate responses based on the queried data. "
+    "This chatbot searches a CSV file stored in a GitHub repository and uses OpenAI's GPT-3.5 model to generate responses based on the queried data. "
     "Make sure to configure your OpenAI API key in the Streamlit secrets section."
 )
 
@@ -16,14 +16,14 @@ openai_api_key = st.secrets["general"]["openai_api_key"]
 # Initialize OpenAI with the API key.
 openai.api_key = openai_api_key
 
-# Define the GitHub URL of the Excel file.
-excel_url = 'https://raw.githubusercontent.com/your-repo/your-repo/main/your-excel-file.xlsx'
+# Define the GitHub URL of the CSV file.
+csv_url = 'https://raw.githubusercontent.com/jamesnicholls4m/wordcloud-application/main/NATA%20A2Z%20List%20-%20August%202024%20-%20v1.csv'
 
-# Load Excel file with error handling.
+# Load CSV file with error handling.
 @st.cache_data
-def load_excel(url):
+def load_csv(url):
     try:
-        data = pd.read_excel(url)
+        data = pd.read_csv(url)
         return data
     except urllib.error.HTTPError as e:
         st.error(f"HTTPError: {e}")
@@ -32,7 +32,7 @@ def load_excel(url):
         st.error(f"An error occurred: {e}")
         return None
 
-data = load_excel(excel_url)
+data = load_csv(csv_url)
 
 if data is None:
     st.stop()  # Stop the app if the data couldn't be loaded.
@@ -54,19 +54,19 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Search the Excel file based on the user's question.
+    # Search the CSV file based on the user's question.
     search_result = data[data.apply(lambda row: row.astype(str).str.contains(prompt, case=False).any(), axis=1)]
 
     # Convert search result to a string.
     if not search_result.empty:
         search_result_str = search_result.to_string(index=False)
     else:
-        search_result_str = "No relevant data found in the Excel file."
+        search_result_str = "No relevant data found in the CSV file."
 
     # Generate a response using the OpenAI API, including the search result in the prompt.
     response = openai.Completion.create(
         model="text-davinci-003",
-        prompt=f"User asked: {prompt}\nExcel Data:\n{search_result_str}\nGenerate a response for the user.",
+        prompt=f"User asked: {prompt}\nCSV Data:\n{search_result_str}\nGenerate a response for the user.",
         max_tokens=150
     ).choices[0].text.strip()
 
