@@ -11,7 +11,7 @@ st.write(
 )
 
 # Retrieve the OpenAI API Key securely stored in Streamlit secrets.
-openai_api_key = st.secrets["general"]["openai_api_key"]
+openai_api_key = st.secrets["openai"]["api_key"]
 
 # Initialize OpenAI with the API key.
 openai.api_key = openai_api_key
